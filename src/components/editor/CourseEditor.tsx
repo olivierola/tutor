@@ -13,6 +13,7 @@ import InfiniteCanvas from '../Canvas/InfiniteCanvas'
 import VerticalToolbar from '../Toolbar/VerticalToolbar'
 import AgentInput from '../Toolbar/AgentInput'
 import ChatBubble from '../Canvas/ChatBubble'
+import { useProactiveTutor } from '../../agent/useProactiveTutor'
 import { useCanvasStore } from '../../store/canvasStore'
 import { useCoursesStore } from '../../store/coursesStore'
 import { useNavStore } from '../../store/navStore'
@@ -38,6 +39,9 @@ const CourseEditor: React.FC<Props> = ({ courseId, pageId }) => {
 
   const course = getCourse(courseId)
   const activePage = course?.pages.find((p) => p.id === pageId)
+
+  // Living tutor: reacts to answers + nudges on inactivity.
+  useProactiveTutor(true)
 
   // Toolbar (vertical) open state.
   const [toolbarOpen, setToolbarOpen] = useState(false)

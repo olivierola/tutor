@@ -16,8 +16,8 @@ import type { Scene } from '../scene/types'
 import { isBackendEnabled, functionsUrl, supabaseAnonKey, getSupabase } from '../lib/supabase'
 import { validateScene } from './../scene/validate'
 import { autoLayout } from '../scene/autoLayout'
-import { useCanvasStore } from '../store/canvasStore'
 import { useCoursesStore } from '../store/coursesStore'
+import { usePlaybackStore } from './playbackStore'
 
 export interface PlanPage { title: string; objective?: string; brief: string }
 export interface LessonPlan { title: string; pages: PlanPage[] }
@@ -34,6 +34,19 @@ async function authHeader(): Promise<Record<string, string>> {
   const sb = await getSupabase()
   const token = sb ? (await sb.auth.getSession()).data.session?.access_token : undefined
   return { apikey: supabaseAnonKey, Authorization: `Bearer ${token ?? supabaseAnonKey}` }
+}
+
+/** Reveal a batch with the writing effect and resolve when it's done. */
+function playAndWait(elements: import('../types/canvas').CanvasElement[], stepMs = 420): Promise<void> {
+  return new Promise((resolve) => {
+    const pb = usePlaybackStore.getState()
+    pb.play(elements, { stepMs })
+    const unsub = usePlaybackStore.subscribe((s) => {
+      if (s.state === 'idle') { unsub(); resolve() }
+    })
+    // Safety timeout in case the store never settles.
+    setTimeout(() => { unsub(); resolve() }, elements.length * stepMs + 4000)
+  })
 }
 
 /** Ask the planner for a structured outline. */
@@ -55,8 +68,13 @@ async function fetchPlan(topic: string): Promise<LessonPlan | null> {
 async function fetchPageScene(brief: string, origin: { x: number; y: number }): Promise<Scene | null> {
   try {
     const prompt =
-      `Génère UNE seule page de cours (format "scene", surtout pas "lesson") ` +
-      `correspondant exactement à ce brief :\n\n${brief}`
+      `Génère UNE seule page de cours (format "scene", surtout pas "lesson"), ` +
+      `RICHE et APPROFONDIE (8 à 12 éléments), correspondant exactement à ce brief :\n\n${brief}\n\n` +
+      `Exigences : un rich-text titre + 2-3 paragraphes substantiels ; toutes les ` +
+      `formules en LaTeX entre \\( \\) ou \\[ \\] ; au moins un exemple chiffré ` +
+      `entièrement résolu ; une figure/schéma/graphe pertinent si utile ; et un ` +
+      `exercice interactif (qcm, short-answer, fill-blank ou flashcard). ` +
+      `Reste rigoureusement dans le sujet du brief.`
     const res = await fetch(functionsUrl('agent'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
@@ -88,7 +106,6 @@ export async function generateLesson(
   if (!plan) { onProgress({ phase: 'error', message: 'Plan indisponible.' }); return false }
 
   const courses = useCoursesStore.getState()
-  const canvas = useCanvasStore.getState()
   if (plan.title?.trim()) courses.updateCourse(ctx.courseId, { title: plan.title.trim() })
 
   const total = plan.pages.length
@@ -105,9 +122,11 @@ export async function generateLesson(
     autoLayout(els, ctx.origin)
 
     if (i === 0) {
-      // First page fills the currently open page.
-      canvas.addElements(els, { select: false, createdBy: 'ai' })
+      // First page fills the currently open page — reveal it with the
+      // writing effect + AI cursor, and wait for the animation to finish.
       courses.updatePage(ctx.courseId, ctx.pageId, { title: page.title || 'Introduction' })
+      const stamped = els.map((el) => ({ ...el, createdBy: 'ai' as const }))
+      await playAndWait(stamped)
     } else {
       const created = courses.addPage(ctx.courseId, page.title || `Page ${i + 1}`)
       if (created) {
