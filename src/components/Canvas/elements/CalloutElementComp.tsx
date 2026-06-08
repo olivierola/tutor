@@ -2,6 +2,7 @@ import React, { memo, useState } from 'react'
 import { Info, AlertTriangle, Lightbulb, ShieldAlert, CheckCircle2, BookOpen, FlaskConical } from 'lucide-react'
 import type { CalloutElement, CalloutKind } from '../../../types/canvas'
 import { useCanvasStore } from '../../../store/canvasStore'
+import { renderMd } from '../../../utils/markdown'
 
 interface Props {
   element: CalloutElement
@@ -63,7 +64,7 @@ const CalloutElementComp: React.FC<Props> = memo(({ element, isSelected, onClick
               onBlur={(ev) => { updateElement(element.id, { body: ev.target.value }); setEditing(false) }}
               style={{ width: '100%', minHeight: 40, resize: 'none', border: '1px solid var(--border)', borderRadius: 6, outline: 'none', background: 'var(--surface-0)', font: '13px system-ui', color: 'var(--text-1)', padding: 6, boxSizing: 'border-box' }} />
           ) : (
-            <div style={{ fontSize: 13, color: 'var(--text-1)', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>{body}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-1)', lineHeight: 1.45 }} dangerouslySetInnerHTML={{ __html: renderMd(body) }} />
           )}
         </div>
       </foreignObject>

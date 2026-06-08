@@ -9,7 +9,7 @@
    a figure's parts don't get torn apart.
    ============================================================ */
 import type { CanvasElement } from '../types/canvas'
-import { getElementBBox, type BBox } from '../utils/canvasUtils'
+import { getElementBBox, getCombinedBBox, type BBox } from '../utils/canvasUtils'
 
 const GAP = 16          // breathing room between blocks
 const STEP = 24         // how far to nudge per iteration
@@ -42,6 +42,36 @@ function groupBox(els: CanvasElement[]): BBox {
     maxX = Math.max(maxX, b.x + b.width); maxY = Math.max(maxY, b.y + b.height)
   }
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+/**
+ * Translate every element so the bounding box of the whole batch is
+ * centred on `origin` (the centre of the user's view). The model's
+ * absolute coordinates are treated as relative layout only — this
+ * guarantees AI content always lands where the user is looking,
+ * grouped together rather than scattered far away.
+ */
+export function centerOn(
+  elements: CanvasElement[],
+  origin: { x: number; y: number },
+): CanvasElement[] {
+  if (elements.length === 0) return elements
+  const box = getCombinedBBox(elements)
+  if (!box) return elements
+  const cx = box.x + box.width / 2
+  const cy = box.y + box.height / 2
+  const dx = Math.round(origin.x - cx)
+  const dy = Math.round(origin.y - cy)
+  if (dx === 0 && dy === 0) return elements
+  for (const el of elements) {
+    el.x += dx; el.y += dy
+    if ('x2' in el) { (el as { x2: number }).x2 += dx; (el as { y2: number }).y2 += dy }
+    if (el.type === 'pen' || el.type === 'light-ray') {
+      const pts = (el as { points: number[][] }).points
+      ;(el as { points: number[][] }).points = pts.map(([px, py]) => [px + dx, py + dy])
+    }
+  }
+  return elements
 }
 
 /**

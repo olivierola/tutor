@@ -8,11 +8,20 @@
 import type { Scene, SceneItem, ValidationResult, Lesson, EditOp, OpsResult } from './types'
 import { SCENE_VERSION } from './types'
 import { validateScene, parseAndValidate, coerce } from './validate'
-import { resolveOverlaps } from './layout'
+import { resolveOverlaps, centerOn } from './layout'
+import { autoLayout } from './autoLayout'
 import { useCanvasStore } from '../store/canvasStore'
 import { useCoursesStore } from '../store/coursesStore'
 import { getTool } from '../tools/registry'
 import type { CanvasElement } from '../types/canvas'
+import { fitViewportToElements } from '../utils/canvasUtils'
+
+/** Frame the viewport on a set of elements (never magnify past 1:1). */
+function frameElements(elements: CanvasElement[]): void {
+  if (elements.length === 0) return
+  const vp = fitViewportToElements(elements, window.innerWidth, window.innerHeight, 120)
+  useCanvasStore.getState().setViewport({ ...vp, zoom: Math.min(vp.zoom, 1) })
+}
 
 /** Validate a Scene and insert its elements (single undo step). */
 export function applyScene(
@@ -22,9 +31,20 @@ export function applyScene(
   const result = validateScene(scene, opts?.origin)
   if (result.elements.length > 0) {
     const existing = useCanvasStore.getState().elements
-    resolveOverlaps(result.elements, existing) // keep AI content from overlapping
+    const origin = opts?.origin ?? { x: 0, y: 0 }
+    if (existing.length === 0) {
+      // Empty page → lay out the whole batch cleanly (two columns).
+      autoLayout(result.elements, origin)
+    } else {
+      // Adding onto existing content → center then avoid overlaps.
+      centerOn(result.elements, origin)
+      resolveOverlaps(result.elements, existing)
+    }
     const stamped = result.elements.map((el) => ({ ...el, createdBy: 'ai' as const }))
     if (opts?.animate) {
+      // Frame the area the batch will occupy *before* revealing it,
+      // so the writing happens within view instead of off-screen.
+      frameElements([...useCanvasStore.getState().elements, ...stamped])
       // Lazy import avoids a store cycle at module load.
       import('../agent/playbackStore').then(({ usePlaybackStore }) => {
         usePlaybackStore.getState().play(stamped)
@@ -136,7 +156,13 @@ export function applyLesson(
   const firstResult = validateScene({ items: first.items }, ctx.origin)
   warnings.push(...firstResult.warnings)
   if (firstResult.elements.length > 0) {
-    resolveOverlaps(firstResult.elements, canvas.elements)
+    const origin = ctx.origin ?? { x: 0, y: 0 }
+    if (canvas.elements.length === 0) {
+      autoLayout(firstResult.elements, origin)
+    } else {
+      centerOn(firstResult.elements, origin)
+      resolveOverlaps(firstResult.elements, canvas.elements)
+    }
     canvas.addElements(firstResult.elements, { select: false, createdBy: 'ai' })
   }
   if (first.title?.trim()) courses.updatePage(ctx.courseId, ctx.pageId, { title: first.title.trim() })
@@ -149,7 +175,7 @@ export function applyLesson(
     if (!created) { warnings.push(`Échec création page ${i + 1}.`); continue }
     const r = validateScene({ items: p.items }, ctx.origin ?? { x: 0, y: 0 })
     warnings.push(...r.warnings)
-    resolveOverlaps(r.elements, []) // fresh page — only de-overlap within itself
+    autoLayout(r.elements, ctx.origin ?? { x: 0, y: 0 }) // tidy two-column layout
     courses.updatePage(ctx.courseId, created.id, {
       elements: r.elements,
       viewport: { x: 0, y: 0, zoom: 1 },

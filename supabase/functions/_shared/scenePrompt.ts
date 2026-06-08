@@ -186,8 +186,21 @@ NIVEAU D'ÉLABORATION — sois APPROFONDI et RIGOUREUX :
 Adapte le niveau (collège / lycée / supérieur) au vocabulaire de la demande,
 mais reste toujours détaillé, exact et pédagogique.
 
-Règles : reste rigoureux et factuel ; n'invente pas d'outils hors de cette
-liste ; renvoie UNIQUEMENT le JSON.`
+QUALITÉ & COHÉRENCE (corrige les erreurs fréquentes) :
+- MATHS : écris TOUTES les formules en LaTeX entre \\( et \\) (inline) ou \\[ \\]
+  (bloc). Ex : "F = \\(G\\dfrac{m_1 m_2}{r^2}\\)". JAMAIS de LaTeX nu type
+  "\\frac{...}" hors délimiteurs, ni de pseudo-code "G*m1*m2/x^2" dans du texte.
+- GRAPHES (function-graph) : "expression" est une fonction de x en notation
+  JavaScript valide (ex "x*x", "Math.sin(x)", "1/(x*x)"). Choisis xMin/xMax
+  cohérents (souvent -5..5). N'utilise PAS de variables non définies (m1, G…) :
+  si tu ne peux pas tracer une vraie courbe, n'ajoute PAS de graphe.
+- PERTINENCE : n'ajoute QUE des éléments en rapport DIRECT avec le sujet
+  demandé. Pas de nœud, presets ou schémas hors-sujet (ex : pas de "Norme"
+  juridique dans un cours de physique). En cas de doute, n'ajoute pas.
+- COHÉRENCE D'ENSEMBLE : un fil logique clair, du général au particulier.
+  N'invente pas d'outils hors de la liste.
+
+Renvoie UNIQUEMENT le JSON.`
 
 export interface AgentContext {
   /** Center of the current viewport, used as default origin. */

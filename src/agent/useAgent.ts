@@ -13,6 +13,7 @@ import { useCanvasStore } from '../store/canvasStore'
 import { useNavStore } from '../store/navStore'
 import { useCoursesStore } from '../store/coursesStore'
 import { useAgentStore } from './agentStore'
+import { fitViewportToElements } from '../utils/canvasUtils'
 
 export type AgentStatus = 'idle' | 'pending' | 'done' | 'error'
 
@@ -31,6 +32,15 @@ function viewportCentre(): { x: number; y: number } {
     x: Math.round((sx - viewport.x) / viewport.zoom),
     y: Math.round((sy - viewport.y) / viewport.zoom),
   }
+}
+
+/** Recenter the viewport on all current content (with sane zoom). */
+function fitViewToContent() {
+  const { elements, setViewport } = useCanvasStore.getState()
+  if (elements.length === 0) return
+  const vp = fitViewportToElements(elements, window.innerWidth, window.innerHeight, 120)
+  // never zoom in past 1:1 — keep text readable, don't over-magnify
+  setViewport({ ...vp, zoom: Math.min(vp.zoom, 1) })
 }
 
 export function useAgent(agent: Agent = remoteAgent) {
@@ -67,6 +77,8 @@ export function useAgent(agent: Agent = remoteAgent) {
           const r = applyLesson(res.lesson, { courseId: view.courseId, pageId: view.pageId, origin })
           warnings = r.warnings
           ok = r.ok
+          // Frame the freshly authored page so the user sees it all.
+          fitViewToContent()
         } else {
           warnings = ['Ouvre un cours pour générer une leçon complète.']
           ok = false
