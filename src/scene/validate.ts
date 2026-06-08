@@ -121,9 +121,16 @@ function validateItem(
   // (the agent must fill them; otherwise we'd show placeholder text
   //  like "Titre" / "Écris ton cours ici").
   const hasText = (v: unknown) => typeof v === 'string' && v.trim().length > 0
-  if (item.type === 'rich-text' && !hasText(item.body) && !hasText(item.heading)) {
-    warnings.push('Bloc de texte vide — ignoré (l’agent doit fournir le contenu).')
-    return null
+  if (item.type === 'rich-text') {
+    // Drop a generic/placeholder heading so we never show the word "Titre".
+    const h = String((el.heading as string) ?? '').trim()
+    if (!h || /^(titre|title|heading|sans titre|untitled)$/i.test(h)) {
+      el.heading = ''
+    }
+    if (!hasText(item.body) && !hasText(el.heading as string)) {
+      warnings.push('Bloc de texte vide — ignoré.')
+      return null
+    }
   }
   if (item.type === 'course-card' && !hasText(item.body)) {
     warnings.push('Carte de cours sans contenu — ignorée.')

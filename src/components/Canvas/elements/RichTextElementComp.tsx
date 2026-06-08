@@ -33,7 +33,7 @@ const RichTextElementComp: React.FC<Props> = memo(({ element, isSelected, onClic
           xmlns="http://www.w3.org/1999/xhtml"
           style={{ width: '100%', fontFamily: 'var(--font-sans)', color, textAlign: align, pointerEvents: editing ? 'auto' : 'none' }}
         >
-          {((heading && heading.trim() && heading.trim() !== 'Titre') || editing) && (
+          {((heading && heading.trim() && !/^(titre|title|heading|sans titre|untitled)$/i.test(heading.trim())) || editing) && (
             <div
               contentEditable={editing} suppressContentEditableWarning
               onBlur={(ev) => updateElement(element.id, { heading: ev.currentTarget.textContent ?? '' })}
