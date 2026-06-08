@@ -163,13 +163,26 @@ export function getElementBBox(el: CanvasElement): BBox {
     case 'flashcard':
       return { x: el.x, y: el.y, width: el.width, height: (el as { height: number }).height }
     case 'qcm': {
-      const q = el as { x: number; y: number; width: number; question: string; options: unknown[] }
-      return { x: q.x, y: q.y, width: q.width, height: 96 + q.options.length * 38 + 60 }
+      const q = el as { x: number; y: number; width: number; question: string; options: { text: string }[]; explanation?: string }
+      const cpl = Math.max(16, Math.floor((q.width - 32) / 7.5))
+      const qLines = Math.max(1, Math.ceil((q.question?.length ?? 0) / cpl))
+      // each option may wrap onto 2 lines
+      const optH = q.options.reduce((a, o) => a + (Math.ceil((o.text?.length ?? 0) / cpl) > 1 ? 56 : 40), 0)
+      const exp = q.explanation ? 64 : 0
+      return { x: q.x, y: q.y, width: q.width, height: 54 + qLines * 22 + optH + exp + 56 }
     }
-    case 'short-answer':
-      return { x: el.x, y: el.y, width: (el as { width: number }).width, height: 150 }
-    case 'fill-blank':
-      return { x: el.x, y: el.y, width: (el as { width: number }).width, height: 140 }
+    case 'short-answer': {
+      const s = el as { x: number; y: number; width: number; question: string; explanation?: string }
+      const cpl = Math.max(16, Math.floor((s.width - 32) / 7.5))
+      const qLines = Math.max(1, Math.ceil((s.question?.length ?? 0) / cpl))
+      return { x: s.x, y: s.y, width: s.width, height: 54 + qLines * 22 + 52 + (s.explanation ? 60 : 0) + 48 }
+    }
+    case 'fill-blank': {
+      const f = el as { x: number; y: number; width: number; template: string }
+      const cpl = Math.max(18, Math.floor((f.width - 32) / 7))
+      const lines = Math.max(1, Math.ceil((f.template?.replace(/\{\{|\}\}/g, '').length ?? 0) / cpl))
+      return { x: f.x, y: f.y, width: f.width, height: 50 + lines * 34 + 48 }
+    }
     case 'image': {
       const im = el as { x: number; y: number; width: number; height: number; caption?: string }
       return { x: im.x, y: im.y, width: im.width, height: im.height + (im.caption ? 22 : 0) }

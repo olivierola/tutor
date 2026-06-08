@@ -125,6 +125,9 @@ Presets pratiques (équivalents à node avec le bon glyph) :
   ⚠️ INTERDIT de laisser "body" vide ou avec un texte générique comme « Titre »
      ou « Écris ton cours ici » : tu DOIS écrire le vrai contenu pédagogique
      complet (plusieurs phrases / points). Un bloc sans contenu réel est rejeté.
+  ⚠️ Le TITRE va dans le champ "heading" (ex "heading":"Le concept"), JAMAIS
+     "Titre". N'écris PAS de titre markdown "###" dans "body" : mets-le dans
+     "heading". Le "body" contient les paragraphes, pas le titre.
 • course-card { kind (definition|example|remember|method|objective|note), title, body, width }
   pour les encadrés « Définition », « Exemple », « À retenir », « Méthode »…
 • sticky-note { text, color (yellow|pink|blue|green|orange|purple), tilt } — rappels brefs.

@@ -76,14 +76,25 @@ export function autoLayout(
     }
   }
 
-  // 2. Flow each column independently, stacking downward.
+  // 2. Balanced two-column flow: each block drops into the column
+  //    that is currently the shortest, so a dense page spreads out
+  //    instead of piling everything into one tall left column.
+  //    "side" blocks (images/notes) are biased to the right.
   let leftY = 0, rightY = 0
   const leftX = 0
   const rightX = LEFT_W + GAP_X
+  let first = true
 
   for (const b of blocks) {
     const box = blockBox(b.els)
-    if (b.side) {
+    // The opening block (usually the page title) always starts top-left.
+    let useRight: boolean
+    if (first && !b.side) { useRight = false }
+    else if (b.side) { useRight = true }
+    else { useRight = rightY < leftY }   // put it in the shorter column
+    first = false
+
+    if (useRight) {
       placeBlock(b.els, rightX, rightY)
       rightY += box.height + GAP_Y
     } else {
