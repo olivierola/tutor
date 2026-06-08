@@ -1,0 +1,44 @@
+# Supabase local config. Run `supabase link --project-ref <ref>` to
+# connect this folder to your hosted project, then `supabase db push`
+# to apply migrations and `supabase functions deploy <name>` for the
+# edge functions. NOTHING here is deployed automatically.
+
+project_id = "tutor-ai"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+# ── Edge functions ──────────────────────────────────────────
+# `agent` is public (verify_jwt = false) so anonymous students can
+# ask the tutor. save-course / share require a valid session.
+[functions.agent]
+verify_jwt = false
+
+[functions.save-course]
+verify_jwt = true
+
+[functions.share]
+verify_jwt = false   # GET (resolve link) is public; POST checks the JWT itself
