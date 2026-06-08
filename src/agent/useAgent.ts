@@ -13,7 +13,14 @@ import { useCanvasStore } from '../store/canvasStore'
 import { useNavStore } from '../store/navStore'
 import { useCoursesStore } from '../store/coursesStore'
 import { useAgentStore } from './agentStore'
+import { generateLesson } from './orchestrator'
 import { fitViewportToElements } from '../utils/canvasUtils'
+
+/** Heuristic: does the request ask for a whole course/lesson? */
+function wantsFullCourse(text: string): boolean {
+  const t = text.toLowerCase()
+  return /\b(cours complet|cours entier|le[çc]on compl[èe]te|tout le (chapitre|cours)|fais(?:-moi)? un cours|cr[ée]e un cours|g[ée]n[èe]re un cours)\b/.test(t)
+}
 
 export type AgentStatus = 'idle' | 'pending' | 'done' | 'error'
 
@@ -62,6 +69,33 @@ export function useAgent(agent: Agent = remoteAgent) {
     if (courseId) courses.addMessage(courseId, { role: 'user', content: text })
     const priorMsgs = courseId ? (courses.getCourse(courseId)?.messages ?? []) : []
     const history = priorMsgs.slice(-8).map((m) => ({ role: m.role, content: m.content }))
+
+    // ── Full-course request → multi-prompt orchestrator ──────────
+    // A planner drafts the outline, then each page is generated from
+    // its own detailed brief and applied progressively.
+    if (courseId && wantsFullCourse(text)) {
+      try {
+        const origin = viewportCentre()
+        const topic = text.replace(/^.*?(cours|le[çc]on)\s+(complet\w*\s+)?(sur|de|d'|à propos de)?\s*/i, '').trim() || text
+        const ok = await generateLesson(topic, { courseId, pageId: (view as { pageId: string }).pageId, origin }, (p) => {
+          const msg = p.phase === 'planning' ? 'Je prépare le plan du cours…'
+            : p.phase === 'page' ? `Génération de la page ${p.current}/${p.total} — ${p.pageTitle ?? ''}…`
+            : p.phase === 'done' ? 'Cours généré ✓' : (p.message ?? 'Erreur.')
+          useAgentStore.getState().set({ status: p.phase === 'done' ? 'done' : 'pending', lastTurn: { text: msg, ok: true, warnings: [] }, chatOnly: true, bubbleOpen: true })
+        })
+        const turn = { text: ok ? 'Voici ton cours, page par page. Tu peux tout modifier.' : "Je n'ai pas pu générer le cours complet.", ok, warnings: [] }
+        setLastTurn(turn); setStatus('done')
+        if (courseId && ok) courses.addMessage(courseId, { role: 'assistant', content: turn.text })
+        useAgentStore.getState().set({ status: 'done', lastTurn: turn, chatOnly: true, bubbleOpen: true })
+        fitViewToContent()
+        return
+      } catch (e) {
+        const turn = { text: e instanceof Error ? e.message : 'Erreur génération.', ok: false, warnings: [] }
+        setLastTurn(turn); setStatus('error')
+        useAgentStore.getState().set({ status: 'error', lastTurn: turn, chatOnly: true, bubbleOpen: true })
+        return
+      }
+    }
 
     try {
       const origin = viewportCentre()

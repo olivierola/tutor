@@ -37,6 +37,9 @@ enable_confirmations = false
 [functions.agent]
 verify_jwt = false
 
+[functions.lesson-plan]
+verify_jwt = false
+
 [functions.save-course]
 verify_jwt = true
 
