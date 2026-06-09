@@ -8,6 +8,9 @@ import { useCanvasStore } from './store/canvasStore'
 import { useNavStore, type HubSection } from './store/navStore'
 import { useCoursesStore } from './store/coursesStore'
 import { useThemeSync } from './theme/useTheme'
+import { useAuthStore } from './auth/authStore'
+import AuthScreen from './auth/AuthScreen'
+import { initCloudSync } from './auth/cloudSync'
 
 /** Editor-only keyboard shortcuts (undo/redo/delete). */
 function useEditorShortcuts(active: boolean) {
@@ -74,8 +77,32 @@ const EditorRoute: React.FC = () => {
   return <CourseEditor courseId={course.id} pageId={page.id} />
 }
 
+/** Shows the auth screen and detects the guest opt-in. */
+const AuthGate: React.FC<{ onGuest: () => void }> = ({ onGuest }) => {
+  const status = useAuthStore((s) => s.status)
+  useEffect(() => { if (status === 'guest') onGuest() }, [status, onGuest])
+  return <AuthScreen />
+}
+
 const App: React.FC = () => {
   useThemeSync()
+  const authStatus = useAuthStore((s) => s.status)
+  const initAuth = useAuthStore((s) => s.init)
+  // Remember a guest choice for the session so reloads don't re-prompt.
+  const [guestChosen, setGuestChosen] = React.useState(() => sessionStorage.getItem('tutor-ai:guest') === '1')
+
+  useEffect(() => { initAuth(); initCloudSync() }, [initAuth])
+  useEffect(() => {
+    if (authStatus === 'guest' && guestChosen) sessionStorage.setItem('tutor-ai:guest', '1')
+  }, [authStatus, guestChosen])
+
+  // While resolving the session, render nothing (avoids a flash).
+  if (authStatus === 'loading') return null
+  // Not authed and hasn't opted into guest → show the auth screen.
+  if (authStatus !== 'authed' && !guestChosen) {
+    return <AuthGate onGuest={() => { setGuestChosen(true); sessionStorage.setItem('tutor-ai:guest', '1') }} />
+  }
+
   return (
     <BrowserRouter>
       <RegisterNavigate />

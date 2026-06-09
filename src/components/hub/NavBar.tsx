@@ -131,7 +131,7 @@ const NavBar: React.FC<Props> = ({ onOpenSearch }) => {
           }}>⌘K</kbd>
         </button>
 
-        <ProfileMenu email="lovableolivier@gmail.com" />
+        <ProfileMenu />
       </div>
     </header>
   )

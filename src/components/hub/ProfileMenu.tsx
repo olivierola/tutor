@@ -4,16 +4,11 @@
    account actions.
    ============================================================ */
 import React, { useState, useRef, useEffect } from 'react'
-import { Sun, Moon, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { Sun, Moon, Settings, LogOut, LogIn, ChevronDown } from 'lucide-react'
 import { useThemeStore } from '../../theme/useTheme'
 import { useNavStore } from '../../store/navStore'
+import { useAuthStore } from '../../auth/authStore'
 import { T, R } from '../../theme/tokens'
-
-interface Props {
-  /** Display name; defaults to a generic label. */
-  name?: string
-  email?: string
-}
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -22,12 +17,19 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-const ProfileMenu: React.FC<Props> = ({ name = 'Enseignant', email }) => {
+const ProfileMenu: React.FC = () => {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const resolved = useThemeStore((s) => s.resolved)
   const toggleTheme = useThemeStore((s) => s.toggle)
   const goHub = useNavStore((s) => s.goHub)
+
+  const authStatus = useAuthStore((s) => s.status)
+  const authedUser = useAuthStore((s) => s.user)
+  const signOut = useAuthStore((s) => s.signOut)
+  const isGuest = authStatus !== 'authed'
+  const name = authedUser?.name || (isGuest ? 'Invité' : 'Utilisateur')
+  const email = authedUser?.email || (isGuest ? 'Mode invité' : undefined)
 
   useEffect(() => {
     if (!open) return
@@ -105,7 +107,9 @@ const ProfileMenu: React.FC<Props> = ({ name = 'Enseignant', email }) => {
           {item(<Settings size={15} />, 'Réglages', () => { setOpen(false); goHub('settings') })}
 
           <div style={{ height: 1, background: T.border, margin: '4px 0' }} />
-          {item(<LogOut size={15} />, 'Se déconnecter', () => setOpen(false))}
+          {isGuest
+            ? item(<LogIn size={15} />, 'Se connecter', () => { setOpen(false); sessionStorage.removeItem('tutor-ai:guest'); window.location.reload() })
+            : item(<LogOut size={15} />, 'Se déconnecter', async () => { setOpen(false); await signOut(); window.location.reload() })}
         </div>
       )}
     </div>
