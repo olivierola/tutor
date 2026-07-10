@@ -34,8 +34,8 @@ const AuthScreen: React.FC = () => {
   )
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.surface0 }}>
-      <div style={{ width: 'min(400px, 92vw)', padding: 32, borderRadius: R.xl, background: T.surface1, border: `1px solid ${T.border}`, boxShadow: T.shadowPop }}>
+    <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffffff' }}>
+      <div style={{ width: 'min(400px, 92vw)', padding: 32, borderRadius: R.xl, background: '#ffffff', border: `1px solid ${T.border}`, boxShadow: T.shadowPop }}>
         {/* Brand */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
           <div style={{ width: 48, height: 48, borderRadius: R.lg, background: 'var(--accent)', color: 'var(--text-on-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
